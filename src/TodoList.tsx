@@ -32,7 +32,7 @@ const TodoItem = ({ item, depth = 0 }) => {
         {item.children && item.children.length > 0 && (
           <button 
             onClick={() => setIsOpen(!isOpen)} 
-            className="mr-2 w-6 h-6 text-center rounded-full bg-white"
+            className="mr-2 text-center rounded-full bg-white"
           >
             {isOpen ? '−' : '+'}
           </button>
