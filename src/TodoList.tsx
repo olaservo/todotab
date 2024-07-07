@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const initialData = `
 Kitchen Renovation
@@ -81,6 +81,8 @@ const parseIndentedInput = (text) => {
 const TodoList = () => {
   const [todoData, setTodoData] = useState([]);
   const [inputText, setInputText] = useState(initialData);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const parsedData = parseIndentedInput(inputText);
@@ -91,9 +93,65 @@ const TodoList = () => {
     setInputText(e.target.value);
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target.result;
+          setInputText(content);
+          setError(null);
+        } catch (error) {
+          setError("Error reading file. Please ensure it's a valid text file.");
+        }
+      };
+      reader.onerror = (error) => {
+        setError("Error reading file: " + error.message);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleFileSave = () => {
+    const element = document.createElement("a");
+    const file = new Blob([inputText], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = "todo_list.txt";
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">TODO List</h1>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+      <div className="mb-4">
+        <input
+          type="file"
+          accept=".txt"
+          onChange={handleFileUpload}
+          ref={fileInputRef}
+          className="hidden"
+        />
+        <button 
+          onClick={() => fileInputRef.current.click()} 
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+        >
+          Load File
+        </button>
+        <button 
+          onClick={handleFileSave}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Save File
+        </button>
+      </div>
       <div className="flex flex-col md:flex-row">
         <div className="w-full md:w-1/2 pr-0 md:pr-4 mb-4 md:mb-0">
           <h2 className="text-xl font-semibold mb-2">TODO Items</h2>
