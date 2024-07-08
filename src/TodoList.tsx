@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps, DroppableProvided, DraggableProvided } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps, DroppableProvided, DraggableProvided, DroppableStateSnapshot, DraggableStateSnapshot } from 'react-beautiful-dnd';
 
 const initialData = `
 Constellation Exploration
@@ -26,7 +26,6 @@ interface TodoItem {
   children: TodoItem[];
 }
 
-// Wrapper component to make react-beautiful-dnd work with React 18
 const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
@@ -39,13 +38,20 @@ const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   if (!enabled) {
     return null;
   }
-  return <Droppable {...props}>{children}</Droppable>;
+  return (
+    <Droppable {...props}>
+      {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
+        children(provided, snapshot)
+      )}
+    </Droppable>
+  );
 };
 
 interface TodoItemProps {
   item: TodoItem;
   depth?: number;
   provided: DraggableProvided;
+  snapshot: DraggableStateSnapshot;
 }
 
 const TodoItem: React.FC<TodoItemProps> = ({ item, depth = 0, provided }) => {
@@ -84,8 +90,13 @@ const TodoItem: React.FC<TodoItemProps> = ({ item, depth = 0, provided }) => {
             >
               {item.children.map((child, index) => (
                 <Draggable key={child.id} draggableId={child.id} index={index}>
-                  {(dragProvided: DraggableProvided) => (
-                    <TodoItem item={child} depth={depth + 1} provided={dragProvided} />
+                  {(dragProvided: DraggableProvided, dragSnapshot: DraggableStateSnapshot) => (
+                    <TodoItem 
+                      item={child} 
+                      depth={depth + 1} 
+                      provided={dragProvided} 
+                      snapshot={dragSnapshot}
+                    />
                   )}
                 </Draggable>
               ))}
@@ -169,7 +180,7 @@ const TodoList: React.FC = () => {
     const element = document.createElement("a");
     const file = new Blob([inputText], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
-    element.download = "starfield_mission_log.txt";
+    element.download = "mission_log.txt";
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -277,8 +288,8 @@ const TodoList: React.FC = () => {
                   <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
                     {todoData.map((item, index) => (
                       <Draggable key={item.id} draggableId={item.id} index={index}>
-                        {(provided: DraggableProvided) => (
-                          <TodoItem item={item} provided={provided} />
+                        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                          <TodoItem item={item} provided={provided} snapshot={snapshot} />
                         )}
                       </Draggable>
                     ))}
