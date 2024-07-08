@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps, DroppableProvided, DraggableProvided } from 'react-beautiful-dnd';
 
 const initialData = `
 Constellation Exploration
@@ -19,8 +19,15 @@ Starship Upgrades
         Optimize gravity generators
 `;
 
+interface TodoItem {
+  id: string;
+  name: string;
+  type: 'category' | 'task';
+  children: TodoItem[];
+}
+
 // Wrapper component to make react-beautiful-dnd work with React 18
-const StrictModeDroppable = ({ children, ...props }) => {
+const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
     const animation = requestAnimationFrame(() => setEnabled(true));
@@ -35,7 +42,13 @@ const StrictModeDroppable = ({ children, ...props }) => {
   return <Droppable {...props}>{children}</Droppable>;
 };
 
-const TodoItem = ({ item, depth = 0, provided }) => {
+interface TodoItemProps {
+  item: TodoItem;
+  depth?: number;
+  provided: DraggableProvided;
+}
+
+const TodoItem: React.FC<TodoItemProps> = ({ item, depth = 0, provided }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const getBackgroundColor = () => {
@@ -63,7 +76,7 @@ const TodoItem = ({ item, depth = 0, provided }) => {
       </div>
       {isOpen && item.children && item.children.length > 0 && (
         <StrictModeDroppable droppableId={item.id} type={`list-${depth + 1}`}>
-          {(droppableProvided) => (
+          {(droppableProvided: DroppableProvided) => (
             <div 
               ref={droppableProvided.innerRef}
               {...droppableProvided.droppableProps}
@@ -71,7 +84,7 @@ const TodoItem = ({ item, depth = 0, provided }) => {
             >
               {item.children.map((child, index) => (
                 <Draggable key={child.id} draggableId={child.id} index={index}>
-                  {(dragProvided) => (
+                  {(dragProvided: DraggableProvided) => (
                     <TodoItem item={child} depth={depth + 1} provided={dragProvided} />
                   )}
                 </Draggable>
@@ -85,10 +98,10 @@ const TodoItem = ({ item, depth = 0, provided }) => {
   );
 };
 
-const parseIndentedInput = (text) => {
+const parseIndentedInput = (text: string): TodoItem[] => {
   const lines = text.split('\n').map(line => line.trimEnd());
-  const root = { children: [] };
-  const stack = [{ node: root, level: -1 }];
+  const root: { children: TodoItem[] } = { children: [] };
+  const stack: { node: TodoItem | { children: TodoItem[] }, level: number }[] = [{ node: root, level: -1 }];
   let id = 0;
 
   lines.forEach(line => {
@@ -101,50 +114,52 @@ const parseIndentedInput = (text) => {
       stack.pop();
     }
 
-    const newNode = {
+    const newNode: TodoItem = {
       id: `item-${id++}`,
       name,
       type: stack.length === 1 ? 'category' : 'task',
       children: []
     };
 
-    stack[stack.length - 1].node.children.push(newNode);
+    (stack[stack.length - 1].node.children as TodoItem[]).push(newNode);
     stack.push({ node: newNode, level });
   });
 
   return root.children;
 };
 
-const TodoList = () => {
-  const [todoData, setTodoData] = useState([]);
-  const [inputText, setInputText] = useState(initialData);
-  const [error, setError] = useState(null);
-  const fileInputRef = useRef(null);
+const TodoList: React.FC = () => {
+  const [todoData, setTodoData] = useState<TodoItem[]>([]);
+  const [inputText, setInputText] = useState<string>(initialData);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const parsedData = parseIndentedInput(inputText);
     setTodoData(parsedData);
   }, [inputText]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputText(e.target.value);
   };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = (e: ProgressEvent<FileReader>) => {
         try {
-          const content = e.target.result;
-          setInputText(content);
-          setError(null);
+          const content = e.target?.result;
+          if (typeof content === 'string') {
+            setInputText(content);
+            setError(null);
+          }
         } catch (error) {
           setError("Error reading file. Please ensure it's a valid text file.");
         }
       };
-      reader.onerror = (error) => {
-        setError("Error reading file: " + error.message);
+      reader.onerror = (error: ProgressEvent<FileReader>) => {
+        setError(`Error reading file: ${error}`);
       };
       reader.readAsText(file);
     }
@@ -166,9 +181,9 @@ const TodoList = () => {
     const sourceId = result.source.droppableId;
     const destId = result.destination.droppableId;
 
-    const newTodoData = JSON.parse(JSON.stringify(todoData));
+    const newTodoData = JSON.parse(JSON.stringify(todoData)) as TodoItem[];
 
-    const findAndRemove = (items, id, index) => {
+    const findAndRemove = (items: TodoItem[], id: string, index: number): TodoItem | undefined => {
       for (let i = 0; i < items.length; i++) {
         if (items[i].id === id) {
           return items[i].children.splice(index, 1)[0];
@@ -180,7 +195,7 @@ const TodoList = () => {
       }
     };
 
-    const findAndInsert = (items, id, index, itemToInsert) => {
+    const findAndInsert = (items: TodoItem[], id: string, index: number, itemToInsert: TodoItem): boolean => {
       for (let i = 0; i < items.length; i++) {
         if (items[i].id === id) {
           items[i].children.splice(index, 0, itemToInsert);
@@ -192,16 +207,19 @@ const TodoList = () => {
           }
         }
       }
+      return false;
     };
 
     const movedItem = sourceId === 'todo-list' 
       ? newTodoData.splice(result.source.index, 1)[0]
       : findAndRemove(newTodoData, sourceId, result.source.index);
 
-    if (destId === 'todo-list') {
-      newTodoData.splice(result.destination.index, 0, movedItem);
-    } else {
-      findAndInsert(newTodoData, destId, result.destination.index, movedItem);
+    if (movedItem) {
+      if (destId === 'todo-list') {
+        newTodoData.splice(result.destination.index, 0, movedItem);
+      } else {
+        findAndInsert(newTodoData, destId, result.destination.index, movedItem);
+      }
     }
 
     setTodoData(newTodoData);
@@ -211,7 +229,7 @@ const TodoList = () => {
     setInputText(updatedText);
   };
 
-  const formatTodoItem = (item, depth) => {
+  const formatTodoItem = (item: TodoItem, depth: number): string => {
     const indent = '    '.repeat(depth);
     let result = `${indent}${item.name}\n`;
     if (item.children && item.children.length > 0) {
@@ -238,7 +256,7 @@ const TodoList = () => {
             className="hidden"
           />
           <button 
-            onClick={() => fileInputRef.current.click()} 
+            onClick={() => fileInputRef.current?.click()} 
             className="bg-blue-700 hover:bg-blue-600 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
           >
             Load Mission Data
@@ -255,11 +273,11 @@ const TodoList = () => {
             <h2 className="text-2xl font-semibold mb-4 text-blue-400">Mission Objectives</h2>
             <DragDropContext onDragEnd={onDragEnd}>
               <StrictModeDroppable droppableId="todo-list" type="list-0">
-                {(provided) => (
+                {(provided: DroppableProvided) => (
                   <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
                     {todoData.map((item, index) => (
                       <Draggable key={item.id} draggableId={item.id} index={index}>
-                        {(provided) => (
+                        {(provided: DraggableProvided) => (
                           <TodoItem item={item} provided={provided} />
                         )}
                       </Draggable>
