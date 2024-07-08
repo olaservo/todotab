@@ -66,10 +66,17 @@ const TodoItem: React.FC<TodoItemProps> = ({ item, depth = 0, provided }) => {
     <div
       ref={provided.innerRef}
       {...provided.draggableProps}
-      {...provided.dragHandleProps}
-      className={`mb-2 rounded-l-full rounded-r-lg ${getBackgroundColor()} p-2 transition-all duration-300 hover:brightness-110`}
+      className={`mb-2 rounded-l-full rounded-r-lg ${getBackgroundColor()} p-2 transition-all duration-300 hover:brightness-110 flex items-center`}
     >
-      <div className="flex items-center">
+      <div
+        {...provided.dragHandleProps}
+        className="mr-2 cursor-move"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 15V13H5V15H3ZM3 11V9H5V11H3ZM7 15V13H9V15H7ZM7 11V9H9V11H7ZM11 15V13H13V15H11ZM11 11V9H13V11H11ZM15 15V13H17V15H15ZM15 11V9H17V11H15ZM19 15V13H21V15H19ZM19 11V9H21V11H19Z" />
+        </svg>
+      </div>
+      <div className="flex-grow flex items-center">
         {item.children && item.children.length > 0 && (
           <button 
             onClick={() => setIsOpen(!isOpen)} 
@@ -86,7 +93,7 @@ const TodoItem: React.FC<TodoItemProps> = ({ item, depth = 0, provided }) => {
             <div 
               ref={droppableProvided.innerRef}
               {...droppableProvided.droppableProps}
-              className="ml-6 mt-2"
+              className="ml-6 mt-2 w-full"
             >
               {item.children.map((child, index) => (
                 <Draggable key={child.id} draggableId={child.id} index={index}>
