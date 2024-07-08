@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 const initialData = `
 Constellation Exploration
@@ -18,7 +19,23 @@ Starship Upgrades
         Optimize gravity generators
 `;
 
-const TodoItem = ({ item, depth = 0 }) => {
+// Wrapper component to make react-beautiful-dnd work with React 18
+const StrictModeDroppable = ({ children, ...props }) => {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    const animation = requestAnimationFrame(() => setEnabled(true));
+    return () => {
+      cancelAnimationFrame(animation);
+      setEnabled(false);
+    };
+  }, []);
+  if (!enabled) {
+    return null;
+  }
+  return <Droppable {...props}>{children}</Droppable>;
+};
+
+const TodoItem = ({ item, depth = 0, provided }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const getBackgroundColor = () => {
@@ -27,24 +44,42 @@ const TodoItem = ({ item, depth = 0 }) => {
   };
 
   return (
-    <div className={`mb-2 rounded-l-full rounded-r-lg ${getBackgroundColor()} p-2 transition-all duration-300 hover:brightness-110`}>
+    <div
+      ref={provided.innerRef}
+      {...provided.draggableProps}
+      {...provided.dragHandleProps}
+      className={`mb-2 rounded-l-full rounded-r-lg ${getBackgroundColor()} p-2 transition-all duration-300 hover:brightness-110`}
+    >
       <div className="flex items-center">
         {item.children && item.children.length > 0 && (
           <button 
             onClick={() => setIsOpen(!isOpen)} 
-            className="mr-2 text-center rounded-full bg-blue-200 text-blue-800 font-bold"
+            className="mr-2 text-center rounded-full bg-blue-200 text-blue-800 font-bold w-6 h-6 flex items-center justify-center"
           >
             {isOpen ? '−' : '+'}
           </button>
         )}
         <span className={`${item.type === 'category' ? 'font-bold text-lg text-blue-200' : 'text-gray-200'}`}>{item.name}</span>
       </div>
-      {isOpen && item.children && (
-        <div className="ml-6 mt-2">
-          {item.children.map((child, index) => (
-            <TodoItem key={index} item={child} depth={depth + 1} />
-          ))}
-        </div>
+      {isOpen && item.children && item.children.length > 0 && (
+        <StrictModeDroppable droppableId={item.id} type={`list-${depth + 1}`}>
+          {(droppableProvided) => (
+            <div 
+              ref={droppableProvided.innerRef}
+              {...droppableProvided.droppableProps}
+              className="ml-6 mt-2"
+            >
+              {item.children.map((child, index) => (
+                <Draggable key={child.id} draggableId={child.id} index={index}>
+                  {(dragProvided) => (
+                    <TodoItem item={child} depth={depth + 1} provided={dragProvided} />
+                  )}
+                </Draggable>
+              ))}
+              {droppableProvided.placeholder}
+            </div>
+          )}
+        </StrictModeDroppable>
       )}
     </div>
   );
@@ -54,6 +89,7 @@ const parseIndentedInput = (text) => {
   const lines = text.split('\n').map(line => line.trimEnd());
   const root = { children: [] };
   const stack = [{ node: root, level: -1 }];
+  let id = 0;
 
   lines.forEach(line => {
     if (line.trim() === '') return;
@@ -66,6 +102,7 @@ const parseIndentedInput = (text) => {
     }
 
     const newNode = {
+      id: `item-${id++}`,
       name,
       type: stack.length === 1 ? 'category' : 'task',
       children: []
@@ -123,10 +160,70 @@ const TodoList = () => {
     document.body.removeChild(element);
   };
 
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const sourceId = result.source.droppableId;
+    const destId = result.destination.droppableId;
+
+    const newTodoData = JSON.parse(JSON.stringify(todoData));
+
+    const findAndRemove = (items, id, index) => {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].id === id) {
+          return items[i].children.splice(index, 1)[0];
+        }
+        if (items[i].children) {
+          const result = findAndRemove(items[i].children, id, index);
+          if (result) return result;
+        }
+      }
+    };
+
+    const findAndInsert = (items, id, index, itemToInsert) => {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].id === id) {
+          items[i].children.splice(index, 0, itemToInsert);
+          return true;
+        }
+        if (items[i].children) {
+          if (findAndInsert(items[i].children, id, index, itemToInsert)) {
+            return true;
+          }
+        }
+      }
+    };
+
+    const movedItem = sourceId === 'todo-list' 
+      ? newTodoData.splice(result.source.index, 1)[0]
+      : findAndRemove(newTodoData, sourceId, result.source.index);
+
+    if (destId === 'todo-list') {
+      newTodoData.splice(result.destination.index, 0, movedItem);
+    } else {
+      findAndInsert(newTodoData, destId, result.destination.index, movedItem);
+    }
+
+    setTodoData(newTodoData);
+
+    // Update the inputText to reflect the new order
+    const updatedText = newTodoData.map(item => formatTodoItem(item, 0)).join('\n');
+    setInputText(updatedText);
+  };
+
+  const formatTodoItem = (item, depth) => {
+    const indent = '    '.repeat(depth);
+    let result = `${indent}${item.name}\n`;
+    if (item.children && item.children.length > 0) {
+      result += item.children.map(child => formatTodoItem(child, depth + 1)).join('');
+    }
+    return result;
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-gray-200 p-4">
       <div className="container mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-blue-300">Starfield Mission Planner</h1>
+        <h1 className="text-4xl font-bold mb-8 text-blue-300">Mission Planner</h1>
         {error && (
           <div className="bg-red-900 border border-red-700 text-gray-200 px-4 py-3 rounded-l-full rounded-r-lg relative mb-4" role="alert">
             <span className="block sm:inline">{error}</span>
@@ -156,11 +253,22 @@ const TodoList = () => {
         <div className="flex flex-col lg:flex-row space-y-8 lg:space-y-0 lg:space-x-8">
           <div className="w-full lg:w-1/2">
             <h2 className="text-2xl font-semibold mb-4 text-blue-400">Mission Objectives</h2>
-            <div className="space-y-4">
-              {todoData.map((item, index) => (
-                <TodoItem key={index} item={item} />
-              ))}
-            </div>
+            <DragDropContext onDragEnd={onDragEnd}>
+              <StrictModeDroppable droppableId="todo-list" type="list-0">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                    {todoData.map((item, index) => (
+                      <Draggable key={item.id} draggableId={item.id} index={index}>
+                        {(provided) => (
+                          <TodoItem item={item} provided={provided} />
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </StrictModeDroppable>
+            </DragDropContext>
           </div>
           <div className="w-full lg:w-1/2">
             <h2 className="text-2xl font-semibold mb-4 text-orange-400">Mission Log Editor</h2>
