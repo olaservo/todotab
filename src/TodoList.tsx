@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps, DroppableProvided, DraggableProvided, DroppableStateSnapshot, DraggableStateSnapshot } from 'react-beautiful-dnd';
+import { getDatabase, ref, set, get } from 'firebase/database';
+import { getAuth } from 'firebase/auth';
 
 const initialData = `Constellation Exploration
     Scout Narion system
@@ -151,6 +153,9 @@ const TodoList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const auth = getAuth();
+  const db = getDatabase();
+
   useEffect(() => {
     const parsedData = parseIndentedInput(inputText);
     setTodoData(parsedData);
@@ -182,7 +187,43 @@ const TodoList: React.FC = () => {
     }
   };
 
-  const handleFileSave = () => {
+  const saveToFirebase = async () => {
+    if (!auth.currentUser) {
+      setError("You must be logged in to save data.");
+      return;
+    }
+
+    const userId = auth.currentUser.uid;
+    try {
+      await set(ref(db, `users/${userId}/missionLog`), inputText);
+      setError(null);
+      alert("Mission log saved successfully!");
+    } catch (error) {
+      setError("Error saving to database. Please try again.");
+    }
+  };
+
+  const loadFromFirebase = async () => {
+    if (!auth.currentUser) {
+      setError("You must be logged in to load data.");
+      return;
+    }
+
+    const userId = auth.currentUser.uid;
+    try {
+      const snapshot = await get(ref(db, `users/${userId}/missionLog`));
+      if (snapshot.exists()) {
+        setInputText(snapshot.val());
+        setError(null);
+      } else {
+        setError("No saved mission log found.");
+      }
+    } catch (error) {
+      setError("Error loading from database. Please try again.");
+    }
+  };
+
+  const handleDownload = () => {
     const element = document.createElement("a");
     const file = new Blob([inputText], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
@@ -264,7 +305,7 @@ const TodoList: React.FC = () => {
             <span className="block sm:inline">{error}</span>
           </div>
         )}
-        <div className="mb-8 flex space-x-4">
+        <div className="mb-8 flex flex-wrap gap-4">
           <input
             type="file"
             accept=".txt"
@@ -276,13 +317,25 @@ const TodoList: React.FC = () => {
             onClick={() => fileInputRef.current?.click()} 
             className="bg-blue-700 hover:bg-blue-600 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
           >
-            Load Mission Data
+            Load Local File
           </button>
           <button 
-            onClick={handleFileSave}
+            onClick={loadFromFirebase}
+            className="bg-green-600 hover:bg-green-500 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
+          >
+            Load from Database
+          </button>
+          <button 
+            onClick={saveToFirebase}
             className="bg-orange-600 hover:bg-orange-500 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
           >
-            Save Mission Data
+            Save to Database
+          </button>
+          <button 
+            onClick={handleDownload}
+            className="bg-purple-600 hover:bg-purple-500 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
+          >
+            Download
           </button>
         </div>
         <div className="flex flex-col lg:flex-row space-y-8 lg:space-y-0 lg:space-x-8">
