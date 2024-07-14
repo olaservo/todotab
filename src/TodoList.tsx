@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps, DroppableProvided, DraggableProvided, DroppableStateSnapshot, DraggableStateSnapshot } from 'react-beautiful-dnd';
 import { getDatabase, ref, set, get } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
+import { parseIndentedInput } from '../utils/todoUtils';
+import { TodoItem, TodoItemProps } from '../types/todo';
 
 const initialData = `Constellation Exploration
     Scout Narion system
@@ -19,13 +21,6 @@ Starship Upgrades
         Install advanced air filtration
         Optimize gravity generators
 `;
-
-interface TodoItem {
-  id: string;
-  name: string;
-  type: 'category' | 'task';
-  children: TodoItem[];
-}
 
 const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   const [enabled, setEnabled] = useState(false);
@@ -47,13 +42,6 @@ const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
     </Droppable>
   );
 };
-
-interface TodoItemProps {
-  item: TodoItem;
-  depth?: number;
-  provided: DraggableProvided;
-  snapshot: DraggableStateSnapshot;
-}
 
 const TodoItem: React.FC<TodoItemProps> = ({ item, depth = 0, provided }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -115,36 +103,6 @@ const TodoItem: React.FC<TodoItemProps> = ({ item, depth = 0, provided }) => {
       )}
     </div>
   );
-};
-
-const parseIndentedInput = (text: string): TodoItem[] => {
-  const lines = text.split('\n').map(line => line.trimEnd());
-  const root: { children: TodoItem[] } = { children: [] };
-  const stack: { node: TodoItem | { children: TodoItem[] }, level: number }[] = [{ node: root, level: -1 }];
-  let id = 0;
-
-  lines.forEach(line => {
-    if (line.trim() === '') return;
-
-    const level = line.search(/\S/);
-    const name = line.trim();
-
-    while (stack.length > 1 && stack[stack.length - 1].level >= level) {
-      stack.pop();
-    }
-
-    const newNode: TodoItem = {
-      id: `item-${id++}`,
-      name,
-      type: stack.length === 1 ? 'category' : 'task',
-      children: []
-    };
-
-    (stack[stack.length - 1].node.children as TodoItem[]).push(newNode);
-    stack.push({ node: newNode, level });
-  });
-
-  return root.children;
 };
 
 const TodoList: React.FC = () => {
