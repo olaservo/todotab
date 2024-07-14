@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps, DroppableProvided, DraggableProvided, DroppableStateSnapshot, DraggableStateSnapshot } from 'react-beautiful-dnd';
 
-const initialData = `
-Constellation Exploration
+const initialData = `Constellation Exploration
     Scout Narion system
         Analyze atmospheric conditions
         Search for water sources
