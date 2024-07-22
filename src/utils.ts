@@ -1,4 +1,4 @@
-import { TodoItem } from '../types/todo';
+import { TodoItem } from './todo';
 
 export const parseIndentedInput = (text: string): TodoItem[] => {
   const lines = text.split('\n').map(line => line.trimEnd());
