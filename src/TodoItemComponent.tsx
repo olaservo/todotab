@@ -1,60 +1,72 @@
 import React, { useState } from 'react';
-import { Draggable, DraggableProvided } from 'react-beautiful-dnd';
-import { TodoItemProps } from './todo';
+import { Draggable } from 'react-beautiful-dnd';
+import { TodoItem } from './todo';
 import { StrictModeDroppable } from './StrictModeDroppable';
 
-const TodoItemComponent: React.FC<TodoItemProps> = ({ item, depth = 0, index }) => {
-  const [isOpen, setIsOpen] = useState(false);
+interface TodoItemProps {
+  item: TodoItem;
+  index: number;
+  depth: number;
+}
 
-  const getBackgroundColor = () => {
-    const colors = ['bg-blue-800', 'bg-slate-700', 'bg-gray-600', 'bg-indigo-800', 'bg-slate-800'];
+const TodoItemComponent: React.FC<TodoItemProps> = ({ item, index, depth }) => {
+  const [isExpanded, setIsExpanded] = useState(depth === 0);
+
+  const toggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
+
+  const getBackgroundColor = (depth: number) => {
+    const colors = [
+      'bg-gray-900',  // Deepest space black
+      'bg-gray-800',  // Dark space gray
+      'bg-gray-700',  // Lighter space gray
+      'bg-blue-900',  // Deep space blue
+      'bg-indigo-900' // Deep space indigo
+    ];
+    return colors[depth % colors.length];
+  };
+
+  const getBorderColor = (depth: number) => {
+    const colors = [
+      'border-blue-500',   // Bright blue
+      'border-indigo-500', // Bright indigo
+      'border-purple-500', // Bright purple
+      'border-pink-500',   // Bright pink
+      'border-red-500'     // Bright red
+    ];
     return colors[depth % colors.length];
   };
 
   return (
     <Draggable draggableId={item.id} index={index}>
-      {(provided: DraggableProvided) => (
+      {(provided) => (
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`mb-2 ${getBackgroundColor()} p-2 transition-all duration-300 hover:brightness-110 flex items-center`}
+          {...provided.dragHandleProps}
+          className={`${getBackgroundColor(depth)} p-3 mb-2 rounded-md border-l-4 ${getBorderColor(depth)} transition-colors duration-200`}
         >
-          <div
-            {...provided.dragHandleProps}
-            className="mr-2 cursor-move"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 15V13H5V15H3ZM3 11V9H5V11H3ZM7 15V13H9V15H7ZM7 11V9H9V11H7ZM11 15V13H13V15H11ZM11 11V9H13V11H11ZM15 15V13H17V15H15ZM15 11V9H17V11H15ZM19 15V13H21V15H19ZM19 11V9H21V11H19Z" />
-            </svg>
-          </div>
-          <div className="flex-grow flex items-center">
+          <div className="flex items-center">
             {item.children && item.children.length > 0 && (
-              <button 
-                onClick={() => setIsOpen(!isOpen)} 
-                className="mr-2 text-center rounded-full bg-blue-200 text-blue-800 font-bold w-6 h-6 flex items-center justify-center"
+              <button
+                onClick={toggleExpand}
+                className="mr-2 text-gray-400 hover:text-gray-200 focus:outline-none transition-colors duration-200"
               >
-                {isOpen ? '−' : '+'}
+                {isExpanded ? '▼' : '▶'}
               </button>
             )}
-            <span className={`${item.type === 'category' ? 'font-bold text-lg text-blue-200' : 'text-gray-200'}`}>{item.name}</span>
+            <span className="text-gray-200 flex-grow">{item.name}</span>
           </div>
-          {isOpen && item.children && item.children.length > 0 && (
+          {item.children && item.children.length > 0 && isExpanded && (
             <StrictModeDroppable droppableId={item.id} type={`list-${depth + 1}`}>
-              {(droppableProvided) => (
-                <div 
-                  ref={droppableProvided.innerRef}
-                  {...droppableProvided.droppableProps}
-                  className="ml-6 mt-2 w-full"
-                >
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="mt-2 pl-4">
                   {item.children.map((child, childIndex) => (
-                    <TodoItemComponent 
-                      key={child.id}
-                      item={child} 
-                      depth={depth + 1} 
-                      index={childIndex}
-                    />
+                    <TodoItemComponent key={child.id} item={child} index={childIndex} depth={depth + 1} />
                   ))}
-                  {droppableProvided.placeholder}
+                  {provided.placeholder}
                 </div>
               )}
             </StrictModeDroppable>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import { parseIndentedInput } from './utils';
 import { TodoItem, TodoListProps } from './todo';
-import TodoItemComponent  from './TodoItemComponent'
+import TodoItemComponent from './TodoItemComponent'
 import { StrictModeDroppable } from './StrictModeDroppable';
 import { saveToFirebase, loadFromFirebase } from './firebaseUtils'
 
@@ -57,6 +57,9 @@ export default function TodoList({ userId }: TodoListProps) {
         setError(`Error reading file: ${error}`);
       };
       reader.readAsText(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -156,7 +159,7 @@ export default function TodoList({ userId }: TodoListProps) {
     return result;
   };
 
-  return (
+return (
     <div className="min-h-screen bg-slate-900 text-gray-200 p-4">
       <div className="container mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-blue-300">Mission Planner</h1>
@@ -206,7 +209,7 @@ export default function TodoList({ userId }: TodoListProps) {
                 {(provided) => (
                   <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
                     {todoData.map((item: TodoItem, index: number) => (
-                      <TodoItemComponent key={item.id} item={item} index={index} />
+                      <TodoItemComponent key={item.id} item={item} index={index} depth={0} />
                     ))}
                     {provided.placeholder}
                   </div>
@@ -226,4 +229,4 @@ export default function TodoList({ userId }: TodoListProps) {
       </div>
     </div>
   );
-};
+}
