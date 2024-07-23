@@ -161,7 +161,7 @@ export default function TodoList({ userId }: TodoListProps) {
       <div className="container mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-blue-300">Mission Planner</h1>
         {error && (
-          <div className="bg-red-900 border border-red-700 text-gray-200 px-4 py-3 rounded-l-full rounded-r-lg relative mb-4" role="alert">
+          <div className="bg-red-900 border border-red-700 text-gray-200 px-4 py-3 relative mb-4" role="alert">
             <span className="block sm:inline">{error}</span>
           </div>
         )}
@@ -175,25 +175,25 @@ export default function TodoList({ userId }: TodoListProps) {
           />
           <button 
             onClick={() => fileInputRef.current?.click()} 
-            className="bg-blue-700 hover:bg-blue-600 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
+            className="bg-blue-700 hover:bg-blue-600 text-gray-200 font-bold py-2 px-6 transition-colors duration-300"
           >
             Load Local File
           </button>
           <button 
             onClick={handleLoadFromFirebase}
-            className="bg-green-600 hover:bg-green-500 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
+            className="bg-green-600 hover:bg-green-500 text-gray-200 font-bold py-2 px-6 transition-colors duration-300"
           >
             Load from Database
           </button>
           <button 
             onClick={handleSaveToFirebase}
-            className="bg-orange-600 hover:bg-orange-500 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
+            className="bg-orange-600 hover:bg-orange-500 text-gray-200 font-bold py-2 px-6 transition-colors duration-300"
           >
             Save to Database
           </button>
           <button 
             onClick={handleDownload}
-            className="bg-purple-600 hover:bg-purple-500 text-gray-200 font-bold py-2 px-6 rounded-l-full rounded-r-lg transition-colors duration-300"
+            className="bg-purple-600 hover:bg-purple-500 text-gray-200 font-bold py-2 px-6 transition-colors duration-300"
           >
             Download
           </button>

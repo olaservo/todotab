@@ -17,7 +17,7 @@ const TodoItemComponent: React.FC<TodoItemProps> = ({ item, depth = 0, index }) 
         <div
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`mb-2 rounded-l-full rounded-r-lg ${getBackgroundColor()} p-2 transition-all duration-300 hover:brightness-110 flex items-center`}
+          className={`mb-2 ${getBackgroundColor()} p-2 transition-all duration-300 hover:brightness-110 flex items-center`}
         >
           <div
             {...provided.dragHandleProps}
