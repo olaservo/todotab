@@ -1,35 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { auth } from './firebaseConfig';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import Login from './Login';
+import TodoList from './TodoList';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignOut = () => {
+    signOut(auth).catch((error) => console.error("Sign out error:", error));
+  };
+
+  if (!user) {
+    return <Login setUser={setUser} />;
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-blue-600">TODO App</h1>
+        <div>
+          <span className="mr-4">Welcome, {user.email}</span>
+          <button 
+            onClick={handleSignOut}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      <TodoList userId={user.uid} />
+    </div>
+  );
 }
-
-export default App

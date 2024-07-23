@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import { parseIndentedInput } from './utils';
-import { TodoItem } from './todo';
+import { TodoItem, TodoListProps } from './todo';
 import TodoItemComponent  from './TodoItemComponent'
 import { StrictModeDroppable } from './StrictModeDroppable';
 import { saveToFirebase, loadFromFirebase } from './firebaseUtils'
@@ -23,7 +23,7 @@ Starship Upgrades
         Optimize gravity generators
 `;
 
-const TodoList: React.FC = () => {
+export default function TodoList({ userId }: TodoListProps) {
   const [todoData, setTodoData] = useState<TodoItem[]>([]);
   const [inputText, setInputText] = useState<string>(initialData);
   const [error, setError] = useState<string | null>(null);
@@ -70,13 +70,28 @@ const TodoList: React.FC = () => {
     document.body.removeChild(element);
   };
 
-  const handleSaveToFirebase = useCallback(() => {
-    saveToFirebase(inputText, setError);
-  }, [inputText, setError]);
+  const handleSaveToFirebase = useCallback(async () => {
+    try {
+      await saveToFirebase(userId, inputText);
+      setError(null);
+    } catch (error) {
+      setError("Error saving to database. Please try again.");
+    }
+  }, [userId, inputText]);
 
-  const handleLoadFromFirebase = useCallback(() => {
-    loadFromFirebase(setError, handleInputChange);
-  }, [setError, handleInputChange]);
+  const handleLoadFromFirebase = useCallback(async () => {
+    try {
+      const data = await loadFromFirebase(userId);
+      if (data) {
+        setInputText(data);
+        setError(null);
+      } else {
+        setError("No data found in the database.");
+      }
+    } catch (error) {
+      setError("Error loading from database. Please try again.");
+    }
+  }, [userId]);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -212,5 +227,3 @@ const TodoList: React.FC = () => {
     </div>
   );
 };
-
-export default TodoList;

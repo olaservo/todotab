@@ -1,44 +1,28 @@
 import { ref, set, get } from 'firebase/database';
-import { auth, db } from './firebaseConfig';
+import { database } from './firebaseConfig'; // Make sure this import path is correct
 
-export const saveToFirebase = async (
-  inputText: string, 
-  setError: (error: string | null) => void
-) => {
-  if (!auth.currentUser) {
-    setError("You must be logged in to save data.");
-    return;
-  }
-
-  const userId = auth.currentUser.uid;
+export const saveToFirebase = async (userId: string, data: string) => {
   try {
-    await set(ref(db, `users/${userId}/missionLog`), inputText);
-    setError(null);
-    alert("Mission log saved successfully!");
+    const todoRef = ref(database, `users/${userId}/todos`);
+    await set(todoRef, data);
+    return true;
   } catch (error) {
-    setError("Error saving to database. Please try again.");
+    console.error("Error saving data to Firebase:", error);
+    throw error;
   }
 };
 
-export const loadFromFirebase = async (
-  setError: (error: string | null) => void,
-  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
-) => {
-  if (!auth.currentUser) {
-    setError("You must be logged in to load data.");
-    return;
-  }
-
-  const userId = auth.currentUser.uid;
+export const loadFromFirebase = async (userId: string) => {
   try {
-    const snapshot = await get(ref(db, `users/${userId}/missionLog`));
+    const todoRef = ref(database, `users/${userId}/todos`);
+    const snapshot = await get(todoRef);
     if (snapshot.exists()) {
-      handleInputChange({ target: { value: snapshot.val() } } as React.ChangeEvent<HTMLTextAreaElement>);
-      setError(null);
+      return snapshot.val();
     } else {
-      setError("No saved mission log found.");
+      return null;
     }
   } catch (error) {
-    setError("Error loading from database. Please try again.");
+    console.error("Error loading data from Firebase:", error);
+    throw error;
   }
 };

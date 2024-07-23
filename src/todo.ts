@@ -12,3 +12,7 @@ export interface TodoItemProps {
   depth?: number;
   index: number;
 }
+
+export interface TodoListProps {
+  userId: string;
+}
